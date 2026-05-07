@@ -1,0 +1,56 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "video-sales-automation-phase2"
+version = "0.1.0"
+description = "Phase2 Core: Clean slate for video sales automation"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    {name = "Video Sales Team"}
+]
+license = {text = "MIT"}
+
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "google-auth-oauthlib>=1.0.0",
+    "google-api-python-client>=2.90.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "structlog>=24.0.0",
+    "click>=8.1.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.7.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+vsa = "vsa.interfaces.cli:main"
+
+[tool.poetry]
+packages = [
+    {include = "vsa", from = "src"}
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
