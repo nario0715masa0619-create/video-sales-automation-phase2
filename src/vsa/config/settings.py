@@ -1,32 +1,52 @@
-from pathlib import Path
-from typing import Optional
+"""
+Settings loader for VSA Phase2-Core
+
+Loads configuration from .env file and environment variables using Pydantic.
+"""
+
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 class Settings(BaseSettings):
-    env: str = "development"
-    debug: bool = False
-    google_sheet_id: str = ""
-    google_credentials_file: Optional[str] = None
-    google_credentials_json: Optional[str] = None
-    log_level: str = "INFO"
-    log_file: Optional[Path] = None
-    log_format: str = "json"
-    crawl_timeout_seconds: int = 30
-    crawl_max_pages_per_lead: int = 10
-    crawl_user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    zerobounce_api_key: Optional[str] = None
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-    def validate_required_fields(self) -> None:
-        if not self.google_sheet_id:
-            raise ValueError("GOOGLE_SHEET_ID is required")
+    """Application settings loaded from .env and environment variables"""
+    
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False
+    )
+    
+    # Environment
+    env: str = Field(default="development", description="Environment (development/staging/production)")
+    debug: bool = Field(default=False, description="Debug mode")
+    
+    # Google Sheets
+    google_sheet_id: str = Field(default="", description="Master Leads Google Sheet ID")
+    google_service_account_json: str = Field(default="credentials/service_account.json", 
+                                            description="Google Service Account JSON file path")
+    
+    # CRM & Phase 5
+    crm_sheet_id: Optional[str] = Field(default=None, description="CRM Google Sheet ID")
+    phase5_sheet_id: Optional[str] = Field(default=None, description="Phase 5 Google Sheet ID")
+    
+    # Logging
+    log_level: str = Field(default="INFO", description="Log level (DEBUG/INFO/WARNING/ERROR)")
+    log_file: Optional[str] = Field(default=None, description="Log file path")
+    
+    # Crawling
+    crawl_timeout_seconds: int = Field(default=30, description="Web crawl timeout")
+    crawl_max_pages_per_lead: int = Field(default=5, description="Max pages to crawl per lead")
+    crawl_retry_count: int = Field(default=3, description="Retry count for failed crawls")
+    
+    # Email Validation
+    zerobounce_api_key: Optional[str] = Field(default=None, description="ZeroBounce API key")
 
 def load_settings() -> Settings:
-    settings = Settings()
-    if settings.env == "production":
-        settings.validate_required_fields()
-    return settings
+    """
+    Load settings from .env and environment variables
+    
+    Returns:
+        Settings instance
+    """
+    return Settings()
