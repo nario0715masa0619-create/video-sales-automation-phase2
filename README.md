@@ -1,153 +1,143 @@
-# video-sales-automation-phase2
+# VSA Phase2-Core
 
-営業自動化基盤の Phase2 リポジトリです。  
-Phase1 の実運用知見を引き継ぎつつ、コード・データモデル・Google スプレッドシート運用を整理し直し、**拡張しやすい土台**を作ることを目的とします。
+Version 0.1.0
 
-## 目的
 
-Phase1 では、以下の流れで営業活動を支える自動化が実装されていました。
+## 概要
 
-- CRM シートに YouTube 起点の情報を蓄積
-- 公式 URL を抽出して Phase5 シートへ連携
-- 公式サイトをクロールして電話・メール等を抽出
-- ZeroBounce でメール検証
-- 営業メール送信
-- 運用ログ / 日次メトリクス記録
+VSA Phase 2 は Phase 1 のクリーン・リライトです。
 
-Phase2 では、この流れを壊さずに、次の課題を解決します。
+- 単一ソース・オブ・トゥルース: Google Sheets Master Leads
+- 4層アーキテクチャ
+- マイグレーション対応
+- スケーラビリティ
 
-- データの正本が複数に分散している
-- スクリプト単位で責務が密結合している
-- YouTube 起点情報と公式サイト起点情報の統合ルールが曖昧
-- 将来の営業チャネル拡張（メール + 問い合わせフォーム）を載せにくい
 
-## Phase2 の基本方針
+## CLI コマンド
 
-### Phase2-Core
-まずは「きれいな土台」を作ります。
+vsa --help
+vsa version
+vsa migrate --mode dry-run
 
-- Master Leads を新設し、唯一の業務台帳にする
-- 2 系統の収集パイプラインを統合する
-- クロール対象と抽出ルールを明文化する
-- 検証・営業可否判定を整理する
-- CLI / config / logging / repository 層を整備する
-- migration 方針を整備する
 
-### 後段で実装するもの
-以下は **Phase2-Core の後** に載せます。
+## Milestone 1: Foundation
 
-- 営業メール送信
-- 問い合わせフォーム送信
-- 実行結果追跡
-- 再送ルール
-- A/B テストや送信チャネル最適化
+- Python プロジェクト構造作成
+- pyproject.toml, .env.example
+- 6層アーキテクチャ
+- MasterLeadsColumns (52列)
+- Enum定義 (21種類)
+- MasterLead dataclass (52フィールド)
+- CLIフレームワーク
+- テストスイート (7/7 PASS)
 
-## Source of Truth
 
-Phase2 では、**Google Spreadsheet の `Master Leads` タブを source of truth とする**設計を採用します。
+## Milestone 2: Google Sheets Integration
 
-- 現在状態の正本: `Master Leads`
-- 履歴・証拠・監査: 補助ログ / DB / 補助タブ
-- 旧 CRM シートと旧 Phase5 シート: **移行元**
-- 新コードが更新する主要対象: **Master Leads**
+- Google Sheets API クライアント
+- Row ↔ Model 変換ロジック
+- Google Sheets Repository 実装
+- Enum定義拡張 (21種類)
+- 列定数拡張 (52列)
+- MasterLead モデル完成
+- 統合テスト (9/9 PASS)
 
-対象スプレッドシート:
-- System of Record: https://docs.google.com/spreadsheets/d/1yxjsn-AZFlYPEq17mprYrDXmpd9CHsif-j2lUdHm78g/edit?usp=sharing
 
-参考リポジトリ:
-- Phase1: https://github.com/nario0715masa0619-create/video-sales-automation-phase1
+## Milestone 3: Migration Script
 
-## 収集パイプライン
+- Extractor: Phase 1 データ抽出
+- Normalizer: URL正規化、Enum マッピング
+- Matcher: 重複リード検出
+- Merger: 優先度ルール適用
+- Loader: Master Leads へのロード
+- Orchestrator: 全パイプライン統合
+- 実装: 1,682行追加、16/16 テスト PASS
 
-Phase2 では、収集は 2 系統のまま維持します。
 
-### 1. YouTube Discovery Pipeline
-役割:
-- YouTube チャンネル起点で候補企業を発見する
-- チャンネル情報、概要欄、候補 URL を収集する
+## テスト結果
 
-### 2. Official Site Enrichment Pipeline
-役割:
-- 公式 URL から企業情報と連絡先を精査する
-- 会社名、電話番号、メールアドレス、問い合わせフォーム URL などを抽出する
+16 passed in 1.34s
 
-## Master Leads の位置づけ
+- test_constants.py: 2
+- test_converters.py: 9
+- test_enums.py: 2
+- test_models.py: 2
+- test_settings.py: 1
 
-`Master Leads` は、**1 行 = 1 営業対象の現在状態**を表します。
+Warnings: 0
 
-ここに持つもの:
-- 統合済み企業名
-- YouTube 起点情報の要約
-- 公式サイト起点情報
-- 連絡先情報
-- 検証結果
-- 営業可否
-- 次アクション
-- 直近の接触サマリ
 
-ここに持たないもの:
-- クロールの全生ログ
-- フォーム送信の詳細実行ログ
-- メール送信の全履歴
-- ZeroBounce の raw レスポンス
+## プロジェクト構成
 
-## ディレクトリ構成案
+src/vsa/
+├── config/settings.py
+├── shared/constants.py, enums.py
+├── domain/models.py
+├── application/migration_*.py (6ファイル)
+├── infrastructure/sheets_*.py, repository.py, converters.py
+└── interfaces/cli.py, logging_setup.py
 
-```text
-src/
-  vsa/
-    config/
-    domain/
-    application/
-    infrastructure/
-    interfaces/
-    shared/
-docs/
-  architecture/
-  migration/
-  implementation/
-  operations/
 tests/
-scripts/
-```
+├── test_constants.py
+├── test_converters.py
+├── test_enums.py
+├── test_models.py
+└── test_settings.py
 
-## 実装スコープ
 
-### In Scope: Phase2-Core
-- Master Leads のデータモデル整備
-- YouTube discovery 入力の受け皿
-- official site enrichment の再設計
-- クロール対象ポリシー
-- 電話 / メール / フォーム URL 抽出の整理
-- source-of-truth ルール
-- migration script
-- CLI の骨格
-- テスト方針の整備
+## Master Leads (52列)
 
-### Out of Scope: 初期実装ではやらない
-- 実メール送信
-- 問い合わせフォーム自動送信
-- CAPTCHA 回避
-- 自動返信解析
-- 商談自動管理
-- フルダッシュボード
+A-L: 識別・運用 (12列)
+lead_id, record_status, lead_stage, canonical_company_name, corp_type, industry, company_prefecture, owner, lead_rank, ng_flag, sales_status, memo
 
-## 実装優先順位
+M-T: YouTube Discovery (8列)
+youtube_channel_id, youtube_channel_url, youtube_channel_name, youtube_handle, youtube_description, youtube_external_links, youtube_discovered_at, youtube_scrape_status
 
-1. ドキュメント確定
-2. データモデル確定
-3. repo 雛形作成
-4. settings / logging / CLI ベース
-5. Google Sheets repository
-6. migration script
-7. official site enrichment 再実装
-8. YouTube discovery 取り込み整理
+U-AC: 公式サイト (9列)
+official_url, official_domain, official_site_status, official_company_name, official_company_name_source_url, company_address, source_type, source_name, source_url
 
-## 参照ドキュメント
+AD-AL: クロール制御 (9列)
+crawl_enabled, crawl_scope, crawl_target_pages, crawl_priority, last_crawled_at, crawl_status, pages_scanned, crawl_error_code, crawl_error_message
 
-- `docs/architecture/overview.md`
-- `docs/architecture/data-model.md`
-- `docs/architecture/scraping-target-policy.md`
-- `docs/migration/migration-plan.md`
-- `docs/implementation/roadmap.md`
-- `docs/operations/runbook.md`
+AM-AV: 連絡先抽出 (10列)
+phone_number, phone_source_url, phone_confidence, official_email, email_source_url, email_confidence, contact_form_url, contact_form_status, contact_form_required_fields, contact_evidence_summary
+
+AW-BG: 検証・営業可否 (11列)
+email_validation_status, email_validation_score, email_validation_provider, email_validation_at, email_sendable, form_sendable, preferred_outreach_channel, contactability_status, outreach_ready, outreach_block_reason, next_action
+
+BH-BP: 営業実行サマリ (9列)
+last_contacted_at, last_contact_channel, last_contact_result, email_contact_count, form_contact_count, reply_count, last_reply_at, deal_status, next_contact_at
+
+BQ-BU: 統合・監査 (5列)
+identity_confidence, primary_source_type, primary_source_ref, created_at, updated_at
+
+
+## マイグレーション優先度ルール
+
+- canonical_company_name: official_site > CRM > YouTube
+- official_url: verified > candidate
+- phone_number, email: official_site pipeline のみ採用
+- 重複検出: domain, URL, company_name ベース
+
+
+## 次のマイルストーン (Milestone 4)
+
+- A) Official Site Enrichment
+- B) YouTube Discovery
+- C) Validation & Contactability
+- D) Documentation
+
+
+## ドキュメント
+
+- docs/architecture/overview.md
+- docs/architecture/data-model.md
+- docs/migration/migration-plan.md
+- docs/implementation/roadmap.md
+
+---
+
+Version: 0.1.0
+Last Updated: 2026-05-08
+Repository: https://github.com/nario0715masa0619-create/video-sales-automation-phase2
+
